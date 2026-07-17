@@ -1,5 +1,242 @@
 <!DOCTYPE html>
 <html lang="ru">
-<head><meta charset="UTF-8"><title>Nodohub</title></head>
-<body><h1>Nodohub работает!</h1><p>Приватные статические страницы.</p></body>
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Nodohub — Приватные страницы-визитки</title>
+<style>
+:root{
+  --bg:#faf9f6;--text:#2b2b2b;--muted:#6b6b6b;--icon:#8b8b8b;
+  --accent:#c7512e;--border:#e0ded8;
+}
+*{margin:0;padding:0;box-sizing:border-box}
+html{scroll-behavior:smooth}
+body{
+  font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,sans-serif;
+  background:var(--bg);color:var(--text);
+  font-size:17px;font-weight:300;line-height:1.6;
+  -webkit-font-smoothing:antialiased;
+}
+.wrap{max-width:1080px;margin:0 auto;padding:0 40px}
+h1,h2,h3{font-weight:400;letter-spacing:-0.3px;color:var(--text)}
+a{color:var(--accent);text-decoration:none}
+a:hover{color:var(--text)}
+
+/* HEADER */
+header{padding:56px 0 0;text-align:center}
+.logo{font-size:28px;font-weight:400;color:var(--text);display:inline-block}
+.logo .dot{color:var(--accent)}
+.tagline{margin-top:6px;font-size:13px;color:var(--muted);letter-spacing:0.2px}
+
+/* HERO */
+.hero{padding:120px 0 100px;text-align:center}
+.hero h1{
+  font-size:52px;line-height:1.15;letter-spacing:-0.8px;
+  max-width:780px;margin:0 auto 28px;font-weight:400;
+}
+.hero p{
+  font-size:19px;color:var(--muted);max-width:620px;
+  margin:0 auto 44px;line-height:1.55;
+}
+.btn{
+  display:inline-block;padding:14px 32px;
+  border:1px solid var(--accent);color:var(--accent);
+  font-size:15px;font-weight:400;letter-spacing:0.2px;
+  transition:background .2s,color .2s;
+  background:transparent;cursor:pointer;
+}
+.btn:hover{background:var(--accent);color:#fff}
+
+/* PREVIEW */
+.preview{padding:40px 0 120px}
+.preview-inner{
+  display:grid;grid-template-columns:320px 1fr;
+  gap:80px;align-items:center;
+}
+.preview-card{
+  width:320px;height:320px;border-radius:16px;
+  background:#fff;border:1px solid var(--border);
+  overflow:hidden;box-shadow:0 1px 2px rgba(43,43,43,0.03);
+}
+.preview-text h2{font-size:32px;line-height:1.25;margin-bottom:18px}
+.preview-text p{color:var(--muted);font-size:17px;max-width:420px}
+
+/* FEATURES */
+.features{padding:80px 0;border-top:1px solid var(--border)}
+.features-grid{
+  display:grid;grid-template-columns:repeat(3,1fr);
+  gap:60px;margin-top:60px;
+}
+.feature-icon{
+  width:48px;height:48px;border-radius:12px;
+  background:#fff;border:1px solid var(--border);
+  display:flex;align-items:center;justify-content:center;
+  margin-bottom:24px;
+}
+.feature h3{font-size:20px;margin-bottom:10px}
+.feature p{color:var(--muted);font-size:16px;line-height:1.6}
+
+/* FORM */
+.signup{padding:120px 0;border-top:1px solid var(--border);text-align:center}
+.signup h2{font-size:40px;margin-bottom:16px;letter-spacing:-0.5px}
+.signup .sub{color:var(--muted);margin-bottom:48px;font-size:17px}
+.form{
+  max-width:420px;margin:0 auto;text-align:left;
+}
+.field{margin-bottom:16px}
+.field label{
+  display:block;font-size:13px;color:var(--muted);
+  margin-bottom:8px;letter-spacing:0.2px;
+}
+.field input{
+  width:100%;padding:14px 16px;
+  background:transparent;border:1px solid var(--border);
+  font-family:inherit;font-size:16px;color:var(--text);
+  transition:border-color .2s;outline:none;
+}
+.field input:focus{border-color:var(--accent)}
+.field input::placeholder{color:#b5b3ad}
+.form .btn{width:100%;margin-top:12px;text-align:center}
+.form-note{
+  margin-top:24px;font-size:13px;color:var(--muted);
+  max-width:420px;margin-left:auto;margin-right:auto;
+  line-height:1.55;
+}
+
+/* FOOTER */
+footer{
+  padding:60px 0;border-top:1px solid var(--border);
+  text-align:center;
+}
+footer p{color:var(--muted);font-size:15px;margin-bottom:8px}
+footer .fine{font-size:13px;color:var(--icon)}
+
+/* RESPONSIVE */
+@media (max-width:768px){
+  .wrap{padding:0 24px}
+  header{padding:36px 0 0}
+  .hero{padding:72px 0 60px}
+  .hero h1{font-size:34px;letter-spacing:-0.5px}
+  .hero p{font-size:17px;margin-bottom:32px}
+  .preview{padding:20px 0 80px}
+  .preview-inner{grid-template-columns:1fr;gap:40px;justify-items:center;text-align:center}
+  .preview-text p{margin:0 auto}
+  .features{padding:60px 0}
+  .features-grid{grid-template-columns:1fr;gap:40px;margin-top:40px}
+  .signup{padding:80px 0}
+  .signup h2{font-size:30px}
+  footer{padding:40px 0}
+}
+</style>
+</head>
+<body>
+
+<div class="wrap">
+
+  <header>
+    <div class="logo">Nodohub<span class="dot">.</span></div>
+    <div class="tagline">Приватные страницы-визитки без трекеров</div>
+  </header>
+
+  <section class="hero">
+    <h1>Ваше присутствие в интернете — чистое и быстрое</h1>
+    <p>Создайте личную страницу-ссылку за 1 минуту. Без рекламы, без слежки, без JavaScript. Только HTML и уважение к приватности.</p>
+    <a href="#signup" class="btn">Создать свою страницу</a>
+  </section>
+
+  <section class="preview">
+    <div class="preview-inner">
+      <div class="preview-card">
+        <svg width="320" height="320" viewBox="0 0 320 320" xmlns="http://www.w3.org/2000/svg" aria-label="Превью страницы Анны Соколовой">
+          <rect width="320" height="320" fill="#ffffff"/>
+          <!-- avatar -->
+          <circle cx="160" cy="78" r="32" fill="#c7512e"/>
+          <text x="160" y="86" text-anchor="middle" font-family="-apple-system,sans-serif" font-size="20" font-weight="400" fill="#ffffff">АС</text>
+          <!-- name -->
+          <text x="160" y="140" text-anchor="middle" font-family="-apple-system,sans-serif" font-size="16" font-weight="400" fill="#2b2b2b">Анна Соколова</text>
+          <text x="160" y="160" text-anchor="middle" font-family="-apple-system,sans-serif" font-size="12" font-weight="300" fill="#6b6b6b">Продуктовый дизайнер</text>
+          <!-- link buttons -->
+          <rect x="50" y="184" width="220" height="32" rx="6" fill="#faf9f6" stroke="#e0ded8" stroke-width="1"/>
+          <text x="160" y="204" text-anchor="middle" font-family="-apple-system,sans-serif" font-size="12" fill="#2b2b2b">Портфолио</text>
+          <rect x="50" y="224" width="220" height="32" rx="6" fill="#faf9f6" stroke="#e0ded8" stroke-width="1"/>
+          <text x="160" y="244" text-anchor="middle" font-family="-apple-system,sans-serif" font-size="12" fill="#2b2b2b">Telegram</text>
+          <rect x="50" y="264" width="220" height="32" rx="6" fill="#faf9f6" stroke="#e0ded8" stroke-width="1"/>
+          <text x="160" y="284" text-anchor="middle" font-family="-apple-system,sans-serif" font-size="12" fill="#2b2b2b">Email</text>
+        </svg>
+      </div>
+      <div class="preview-text">
+        <h2>Так выглядит страница, созданная в Nodohub</h2>
+        <p>Чистая, элегантная, загружается мгновенно. Никакого визуального шума — только вы и ваши ссылки.</p>
+      </div>
+    </div>
+  </section>
+
+  <section class="features">
+    <div class="features-grid">
+
+      <div class="feature">
+        <div class="feature-icon">
+          <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="#8b8b8b" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round">
+            <rect x="5" y="11" width="14" height="10" rx="1.5"/>
+            <path d="M8 11V7a4 4 0 0 1 8 0v4"/>
+            <circle cx="12" cy="16" r="1"/>
+          </svg>
+        </div>
+        <h3>Приватность</h3>
+        <p>Никаких трекеров, куки-баннеров, сбора данных. Ваша страница — только для вас и ваших гостей.</p>
+      </div>
+
+      <div class="feature">
+        <div class="feature-icon">
+          <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="#8b8b8b" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round">
+            <path d="M13 2L4 14h7l-1 8 9-12h-7l1-8z"/>
+          </svg>
+        </div>
+        <h3>Скорость</h3>
+        <p>Загрузка за 50 миллисекунд. Только статический HTML, никакого JavaScript.</p>
+      </div>
+
+      <div class="feature">
+        <div class="feature-icon">
+          <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="#8b8b8b" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round">
+            <path d="M9.4 4.4c-.7 1.5-.6 3.3.4 4.3 1.3 1.3 3.7.8 4.7-.8L20 2l-5.9 5.5c-1 1.6-3.4 2.1-4.7.8-1-1-1.1-2.8-.4-4.3L13 0"/>
+            <path d="M9.5 8.5L3 20l4.5-1.5L11 22l6.5-11.5"/>
+          </svg>
+        </div>
+        <h3>Дизайн</h3>
+        <p>Минималистичные темы, созданные профессиональными дизайнерами. Никакого визуального шума.</p>
+      </div>
+
+    </div>
+  </section>
+
+  <section class="signup" id="signup">
+    <h2>Начните прямо сейчас</h2>
+    <p class="sub">Создайте свою страницу за 60 секунд</p>
+    <form class="form" action="#" method="post">
+      <div class="field">
+        <label for="name">Ваше имя</label>
+        <input type="text" id="name" name="name" placeholder="Анна Соколова" required>
+      </div>
+      <div class="field">
+        <label for="email">Email</label>
+        <input type="email" id="email" name="email" placeholder="you@example.com" required>
+      </div>
+      <div class="field">
+        <label for="password">Пароль</label>
+        <input type="password" id="password" name="password" placeholder="Минимум 8 символов" required>
+      </div>
+      <button type="submit" class="btn">Зарегистрироваться</button>
+    </form>
+    <p class="form-note">Регистрируясь, вы соглашаетесь с философией Nodohub: никакого спама, никакой слежки.</p>
+  </section>
+
+  <footer>
+    <p>Nodohub — проект с открытым исходным кодом. Сделано с уважением к приватности.</p>
+    <p class="fine">Сертификат Let's Encrypt. Никаких трекеров. Статический HTML.</p>
+  </footer>
+
+</div>
+
+</body>
 </html>
