@@ -1,0 +1,35 @@
+{
+  "username": "anna",
+  "name": "Анна Соколова",
+  "role": "Продуктовый дизайнер",
+  "bio": "Создаю интерфейсы, которые уважают человека. Минимализм, инклюзивность, честность.",
+  "avatar_initial": "АС",
+  "theme": "minimal",
+  "links": [
+    {
+      "title": "Behance",
+      "url": "https://behance.net/anna",
+      "featured": false
+    },
+    {
+      "title": "Dribbble",
+      "url": "https://dribbble.com/anna",
+      "featured": false
+    },
+    {
+      "title": "Telegram",
+      "url": "https://t.me/anna",
+      "featured": false
+    },
+    {
+      "title": "LinkedIn",
+      "url": "https://linkedin.com/in/anna",
+      "featured": false
+    },
+    {
+      "title": "Портфолио",
+      "url": "https://anna.design",
+      "featured": true
+    }
+  ]
+}

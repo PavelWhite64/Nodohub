@@ -1,16 +1,37 @@
-# This is a sample Python script.
+import json
+import argparse
+from pathlib import Path
+from fastapi import FastAPI
+from fastapi.staticfiles import StaticFiles
+import uvicorn
 
-# Press Shift+F10 to execute it or replace it with your code.
-# Press Double Shift to search everywhere for classes, files, tool windows, actions, and settings.
+from generator.models import PageConfig
+from generator.renderer import save_page
 
+app = FastAPI(title="Nodohub")
 
-def print_hi(name):
-    # Use a breakpoint in the code line below to debug your script.
-    print(f'Hi, {name}')  # Press Ctrl+F8 to toggle the breakpoint.
+@app.post("/api/generate")
+def generate_page(config: PageConfig):
+    path = save_page(config)
+    return {"url": f"/{config.username}.html"}
 
+# Отдача статики
+app.mount("/", StaticFiles(directory="static", html=True), name="static")
 
-# Press the green button in the gutter to run the script.
-if __name__ == '__main__':
-    print_hi('PyCharm')
+def cli():
+    parser = argparse.ArgumentParser(description="Nodohub static page generator")
+    parser.add_argument("--config", required=True, help="Path to JSON config")
+    args = parser.parse_args()
+    data = json.loads(Path(args.config).read_text(encoding="utf-8"))
+    config = PageConfig(**data)
+    path = save_page(config)
+    print(f"✅ Page generated: {path}")
 
-# See PyCharm help at https://www.jetbrains.com/help/pycharm/
+if __name__ == "__main__":
+    import sys
+    # Если первый аргумент "generate", убираем его и передаём остальное в CLI
+    if len(sys.argv) > 1 and sys.argv[1] == "generate":
+        sys.argv.pop(1)  # удаляем "generate"
+        cli()
+    else:
+        uvicorn.run(app, host="0.0.0.0", port=8000)

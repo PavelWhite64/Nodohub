@@ -1,0 +1,12 @@
+version: '3.8'
+
+services:
+  nodohub:
+    build: .
+    ports:
+      - "8000:8000"
+    volumes:
+      - ./static:/app/static
+      - ./examples:/app/examples
+    environment:
+      - DOMAIN=localhost
