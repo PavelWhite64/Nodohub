@@ -13,6 +13,10 @@ dist/
 *.egg-info/
 
 # Локальные настройки и IDE
+docker-compose.override.yml
+nginx.dev.conf
+__pycache__
+*.pyc
 .idea/
 .vscode/
 *.sublime-*

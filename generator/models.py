@@ -11,6 +11,6 @@ class PageConfig(BaseModel):
     name: str
     role: Optional[str] = ""
     bio: str
-    avatar_initial: str = "АС"
+    avatar_initial: str = "N"
     theme: str = "minimal"
     links: List[Link]
