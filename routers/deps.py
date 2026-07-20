@@ -1,7 +1,6 @@
 from fastapi import Request, Depends, HTTPException
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy import select
-from sqlalchemy.orm import selectinload
 from jose import jwt, JWTError
 from config import SECRET_KEY
 from auth import ALGORITHM
@@ -17,7 +16,7 @@ async def get_current_user(request: Request, db: AsyncSession = Depends(get_db))
         user_id = int(payload.get("sub"))
     except (JWTError, ValueError):
         raise HTTPException(status_code=401, detail="Invalid token")
-    result = await db.execute(select(User).where(User.id == user_id).options(selectinload(User.page)))
+    result = await db.execute(select(User).where(User.id == user_id))
     user = result.scalar_one_or_none()
     if not user:
         raise HTTPException(status_code=401, detail="User not found")

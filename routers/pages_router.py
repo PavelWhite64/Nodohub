@@ -1,6 +1,6 @@
 from pathlib import Path
-from fastapi import APIRouter, Request, HTTPException
-from fastapi.responses import HTMLResponse, FileResponse, RedirectResponse
+from fastapi import APIRouter, HTTPException
+from fastapi.responses import HTMLResponse, FileResponse
 from typing import Optional
 
 router = APIRouter()

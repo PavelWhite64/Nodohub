@@ -1,5 +1,5 @@
 from fastapi import APIRouter, Request, Depends, Form
-from fastapi.responses import RedirectResponse, HTMLResponse
+from fastapi.responses import RedirectResponse
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy import select
 from database import get_db
@@ -25,7 +25,7 @@ async def register(
     await db.commit()
     await db.refresh(user)
     token = create_access_token({"sub": str(user.id), "email": user.email})
-    response = RedirectResponse("/dashboard", status_code=302)
+    response = RedirectResponse("/account", status_code=302)
     response.set_cookie(key="session", value=token, httponly=True, secure=False, samesite="lax")
     return response
 
@@ -41,7 +41,7 @@ async def login(
     if not user or not verify_password(password, user.hashed_password):
         return RedirectResponse("/login?error=invalid_credentials", status_code=302)
     token = create_access_token({"sub": str(user.id), "email": user.email})
-    response = RedirectResponse("/dashboard", status_code=302)
+    response = RedirectResponse("/account", status_code=302)
     response.set_cookie(key="session", value=token, httponly=True, secure=False, samesite="lax")
     return response
 

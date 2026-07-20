@@ -1,7 +1,7 @@
 import json
 from pathlib import Path
 from fastapi import APIRouter, Request, Depends, Form
-from fastapi.responses import HTMLResponse
+from fastapi.responses import HTMLResponse, RedirectResponse
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy import select
 from typing import Optional
@@ -14,7 +14,6 @@ from .deps import get_current_user
 router = APIRouter()
 
 def render_dashboard_html(user: User, page: Page, links: list, saved: bool = False, error: Optional[str] = None) -> str:
-    # Первое поле ссылки (всегда видимо)
     link_fields = f"""
     <div class="field">
       <label>Ссылка 1</label>
@@ -27,7 +26,6 @@ def render_dashboard_html(user: User, page: Page, links: list, saved: bool = Fal
     </div>
     """
 
-    # Вложенные группы для ссылок 2–5 (строим с конца)
     group_4 = f"""
           <div class="field" id="link-field-4">
             <label>Ссылка 5</label>
@@ -106,7 +104,6 @@ def render_dashboard_html(user: User, page: Page, links: list, saved: bool = Fal
     </div>
 """
 
-    # Внешняя кнопка для 2-й ссылки
     has_data_1 = bool(links[1].get('title') or links[1].get('url'))
     checked_1 = "checked" if has_data_1 else ""
     link_fields += f"""
@@ -124,7 +121,6 @@ def render_dashboard_html(user: User, page: Page, links: list, saved: bool = Fal
 
     toggle_css = """
     .toggle-link { display: none; }
-    /* Стили кнопки с повышенной специфичностью */
     label.add-link-btn {
         width: 48px;
         height: 48px;
@@ -139,7 +135,7 @@ def render_dashboard_html(user: User, page: Page, links: list, saved: bool = Fal
         display: flex;
         align-items: center;
         justify-content: center;
-        font-size: 0;            /* убираем размер текста */
+        font-size: 0;
         line-height: 0;
         padding: 0;
     }
@@ -162,41 +158,37 @@ def render_dashboard_html(user: User, page: Page, links: list, saved: bool = Fal
     #toggle-link-2:checked + label[for="toggle-link-2"] { display: none; }
     #toggle-link-3:checked + label[for="toggle-link-3"] { display: none; }
     #toggle-link-4:checked + label[for="toggle-link-4"] { display: none; }
-
-    /* Исключение для чекбоксов и радиокнопок внутри .field */
     .field input[type="checkbox"],
     .field input[type="radio"] {
       width: auto;
     }
-
-    /* Кастомные радиокнопки */
     .featured-radio {
-      display: flex;
-      align-items: center;
-      gap: 10px;
-      margin-top: 12px;
+        display: flex;
+        align-items: center;
+        gap: 10px;
+        margin-top: 12px;
     }
     .featured-radio input[type="radio"] {
-      appearance: none;
-      -webkit-appearance: none;
-      width: 18px;
-      height: 18px;
-      border: 2px solid var(--border);
-      border-radius: 50%;
-      margin: 0;
-      cursor: pointer;
-      transition: all .2s;
-      background: transparent;
+        appearance: none;
+        -webkit-appearance: none;
+        width: 18px;
+        height: 18px;
+        border: 2px solid var(--border);
+        border-radius: 50%;
+        margin: 0;
+        cursor: pointer;
+        transition: all .2s;
+        background: transparent;
     }
     .featured-radio input[type="radio"]:checked {
-      border-color: var(--accent);
-      background: var(--accent);
+        border-color: var(--accent);
+        background: var(--accent);
     }
     .featured-radio label {
-      color: var(--muted);
-      cursor: pointer;
-      font-size: 14px;
-      font-weight: 400;
+        color: var(--muted);
+        cursor: pointer;
+        font-size: 14px;
+        font-weight: 400;
     }
     """
 
@@ -205,7 +197,7 @@ def render_dashboard_html(user: User, page: Page, links: list, saved: bool = Fal
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width,initial-scale=1">
-  <title>Личный кабинет — Nodohub</title>
+  <title>Редактор визитки — Nodohub</title>
   <style>
     :root{{ --bg:#faf9f6;--text:#2b2b2b;--muted:#6b6b6b;--accent:#c7512e;--border:#e0ded8; }}
     *{{margin:0;padding:0;box-sizing:border-box}}
@@ -217,7 +209,7 @@ def render_dashboard_html(user: User, page: Page, links: list, saved: bool = Fal
       padding:40px 24px;max-width:720px;margin:0 auto;
     }}
     h1{{font-weight:400;font-size:32px;letter-spacing:-0.5px;margin-bottom:8px}}
-    .logout{{float:right;font-size:14px;color:var(--accent);text-decoration:none;margin-top:8px}}
+    .back-link{{float:right;font-size:14px;color:var(--accent);text-decoration:none;margin-top:8px}}
     .card{{
       background:#fff;border:1px solid var(--border);border-radius:12px;
       padding:40px;margin-top:32px;
@@ -252,15 +244,16 @@ def render_dashboard_html(user: User, page: Page, links: list, saved: bool = Fal
   </style>
 </head>
 <body>
-  <a href="/logout" class="logout">Выйти</a>
+  <a href="/account" class="back-link">← В кабинет</a>
   <h1>{user.name}</h1>
   <hr class="divider">
   {"<div class='error'>" + error + "</div>" if error else ""}
   {f"<div class='success'>Страница обновлена! <a class='preview-link' href='/{page.username}.html'>Посмотреть</a></div>" if saved else ""}
   <form method="post" class="card">
     <div class="field">
-      <label>Username (адрес вашей страницы)</label>
-      <input type="text" name="username" value="{page.username}" required placeholder="anna">
+      <label>Адрес вашей страницы</label>
+      <div style="padding:12px 16px;background:#f5f5f5;border-radius:4px;">{page.username}</div>
+      <input type="hidden" name="username" value="{page.username}">
     </div>
     <div class="field">
       <label>Имя</label>
@@ -282,37 +275,46 @@ def render_dashboard_html(user: User, page: Page, links: list, saved: bool = Fal
 </body>
 </html>"""
 
-@router.get("/dashboard", response_class=HTMLResponse)
-async def dashboard(request: Request, db: AsyncSession = Depends(get_db)):
+@router.get("/dashboard/new")
+async def new_page(request: Request, db: AsyncSession = Depends(get_db)):
     user = await get_current_user(request, db)
-    if not user.page:
-        base_username = user.email.split('@')[0]
-        username = base_username
-        counter = 0
-        while True:
-            result = await db.execute(select(Page).where(Page.username == username))
-            if not result.scalar_one_or_none():
-                break
-            counter += 1
-            username = f"{base_username}{counter}"
-        page = Page(user_id=user.id, username=username, links="[]")
-        db.add(page)
-        await db.commit()
-        await db.refresh(page)
-    else:
-        page = user.page
+    result = await db.execute(select(Page).where(Page.user_id == user.id))
+    count = len(result.scalars().all())
+    if count >= 3:
+        return RedirectResponse("/account?error=limit", status_code=302)
+    base = user.email.split('@')[0]
+    username = base
+    counter = 0
+    while True:
+        result = await db.execute(select(Page).where(Page.username == username))
+        if not result.scalar_one_or_none():
+            break
+        counter += 1
+        username = f"{base}{counter}"
+    page = Page(user_id=user.id, username=username, links="[]")
+    db.add(page)
+    await db.commit()
+    await db.refresh(page)
+    return RedirectResponse(f"/dashboard/{page.id}", status_code=302)
 
+@router.get("/dashboard/{page_id}", response_class=HTMLResponse)
+async def dashboard_edit(page_id: int, request: Request, db: AsyncSession = Depends(get_db)):
+    user = await get_current_user(request, db)
+    result = await db.execute(select(Page).where(Page.id == page_id, Page.user_id == user.id))
+    page = result.scalar_one_or_none()
+    if not page:
+        return RedirectResponse("/account", status_code=302)
     links = json.loads(page.links) if page.links else []
     if not isinstance(links, list):
         links = []
     while len(links) < 5:
         links.append({"title": "", "url": "", "featured": False})
-
     html = render_dashboard_html(user, page, links)
     return HTMLResponse(html)
 
-@router.post("/dashboard", response_class=HTMLResponse)
+@router.post("/dashboard/{page_id}", response_class=HTMLResponse)
 async def dashboard_save(
+    page_id: int,
     request: Request,
     db: AsyncSession = Depends(get_db),
     username: str = Form(...),
@@ -332,11 +334,10 @@ async def dashboard_save(
     link_url_4: Optional[str] = Form(""),
 ):
     user = await get_current_user(request, db)
-    if not user.page:
-        page = Page(user_id=user.id, username=username)
-        db.add(page)
-    else:
-        page = user.page
+    result = await db.execute(select(Page).where(Page.id == page_id, Page.user_id == user.id))
+    page = result.scalar_one_or_none()
+    if not page:
+        return RedirectResponse("/account", status_code=302)
 
     old_username = page.username
     page.username = username
@@ -440,7 +441,7 @@ async def dashboard_save(
     <p class="username">nodohub.ru/{page.username}</p>
     <div class="actions">
       <a href="/{page.username}.html" class="btn">Посмотреть</a>
-      <a href="/dashboard" class="btn btn-secondary">Редактировать</a>
+      <a href="/account" class="btn btn-secondary">В кабинет</a>
     </div>
     <p class="note">Вы будете перенаправлены на свою страницу через 5 секунд</p>
   </div>
