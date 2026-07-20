@@ -1,32 +1,46 @@
-# Байт-код и скомпилированные файлы
+# Байт-код Python
 __pycache__/
 *.py[cod]
+*.pyc
 *$py.class
 
-# Виртуальные окружения
+# Виртуальное окружение
 venv/
+.venv/
+
+# Файлы окружения
 .env
 
-# Файлы и папки для сборки и дистрибуции
+# Настройки IDE и редакторов
+.idea/
+.vscode/
+*.sublime-*
+*.swp
+*.swo
+*~
+
+# Файлы Docker (локальные переопределения)
+docker-compose.override.yml
+
+# Локальный конфиг nginx
+nginx.dev.conf
+
+# Скрипты и данные, специфичные для сервера (не попадают в репозиторий)
+backup.sh
+backups/
+
+# Логи и временные файлы
+*.log
+*.cache
+
+# Системные файлы
+.DS_Store
+Thumbs.db
+
+# Файлы, сгенерированные при сборке
 build/
 dist/
 *.egg-info/
 
-# Локальные настройки и IDE
-docker-compose.override.yml
-nginx.dev.conf
-__pycache__
-*.pyc
-.idea/
-.vscode/
-*.sublime-*
-
-# Системные и временные файлы
-.DS_Store
-Thumbs.db
-*.log
-*.cache
-*.py,cover
-
-# Контрольные точки Jupyter Notebook
+# Контрольные точки Jupyter
 .ipynb_checkpoints/
