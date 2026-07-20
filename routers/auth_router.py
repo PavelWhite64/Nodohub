@@ -39,7 +39,7 @@ async def login(
     result = await db.execute(select(User).where(User.email == email))
     user = result.scalar_one_or_none()
     if not user or not verify_password(password, user.hashed_password):
-        return HTMLResponse("<h1>Неверный email или пароль</h1><a href='/login'>Назад</a>", status_code=401)
+        return RedirectResponse("/login?error=invalid_credentials", status_code=302)
     token = create_access_token({"sub": str(user.id), "email": user.email})
     response = RedirectResponse("/dashboard", status_code=302)
     response.set_cookie(key="session", value=token, httponly=True, secure=False, samesite="lax")
