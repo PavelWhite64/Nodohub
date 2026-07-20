@@ -45,8 +45,10 @@ body{
   justify-content:center;
   margin-bottom:40px;
   overflow:hidden;
+  box-shadow: 0 4px 12px rgba(0,0,0,0.06);
 }
 .avatar svg{width:100%;height:100%;display:block}
+.avatar img{width:100%;height:100%;object-fit:cover;border-radius:50%;}
 .name{
   font-size:32px;
   font-weight:400;
@@ -150,6 +152,9 @@ body{
 </head>
 <body>
 <main class="card">
+  {% if avatar_url %}
+  <img src="{{ avatar_url }}" alt="{{ name }}" class="avatar">
+  {% else %}
   <div class="avatar" role="img" aria-label="{{ name }}">
     <svg viewBox="0 0 96 96" xmlns="http://www.w3.org/2000/svg">
       <rect width="96" height="96" fill="#e8e5df"/>
@@ -158,6 +163,7 @@ body{
             font-size="28" font-weight="300" letter-spacing="1" fill="#2b2b2b">{{ avatar_initial }}</text>
     </svg>
   </div>
+  {% endif %}
   <h1 class="name">{{ name }}</h1>
   {% if role %}<p class="role">{{ role }}</p>{% endif %}
   <p class="bio">{{ bio }}</p>

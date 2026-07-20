@@ -89,9 +89,15 @@ async def delete_page(page_id: int, request: Request, db: AsyncSession = Depends
     result = await db.execute(select(Page).where(Page.id == page_id, Page.user_id == user.id))
     page = result.scalar_one_or_none()
     if page:
+        # Удаление HTML-файла
         static_path = Path("static") / f"{page.username}.html"
         if static_path.exists():
             static_path.unlink()
+        # Удаление аватара
+        for ext in ["png", "jpg", "jpeg", "webp"]:
+            avatar_path = Path("static/avatars") / f"{page.username}.{ext}"
+            if avatar_path.exists():
+                avatar_path.unlink()
         await db.delete(page)
         await db.commit()
     return RedirectResponse("/account", status_code=302)

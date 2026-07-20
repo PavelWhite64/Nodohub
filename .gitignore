@@ -49,3 +49,4 @@ dist/
 static/*.html
 !static/index.html
 !static/login.html
+static/avatars/

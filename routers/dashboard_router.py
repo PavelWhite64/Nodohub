@@ -1,10 +1,12 @@
-import json
+import json, io
 from pathlib import Path
-from fastapi import APIRouter, Request, Depends, Form
+from fastapi import APIRouter, Request, Depends, Form, UploadFile, File
 from fastapi.responses import HTMLResponse, RedirectResponse
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy import select
 from typing import Optional
+from PIL import Image, ImageOps
+
 from database import get_db
 from models import User, Page
 from generator.renderer import render_page
@@ -13,7 +15,60 @@ from .deps import get_current_user
 
 router = APIRouter()
 
+AVATAR_DIR = Path("static/avatars")
+ALLOWED_EXTENSIONS = {"png", "jpg", "jpeg", "webp"}
+MAX_AVATAR_SIZE = 2 * 1024 * 1024  # 2 МБ
+
+def get_avatar_url(username: str) -> Optional[str]:
+    """Ищем аватар в любом из поддерживаемых форматов, приоритет — обработанный jpg."""
+    for ext in ["jpg", "jpeg", "png", "webp"]:
+        path = AVATAR_DIR / f"{username}.{ext}"
+        if path.exists():
+            return f"/avatars/{username}.{ext}"
+    return None
+
+def delete_avatars(username: str):
+    for ext in ALLOWED_EXTENSIONS:
+        path = AVATAR_DIR / f"{username}.{ext}"
+        if path.exists():
+            path.unlink()
+
+def process_avatar(image_data: bytes) -> bytes:
+    """Обрезает квадрат по центру и изменяет размер до 500×500."""
+    img = Image.open(io.BytesIO(image_data))
+    # Конвертируем RGBA в RGB, если нужно
+    if img.mode == 'RGBA':
+        img = img.convert('RGB')
+    elif img.mode != 'RGB':
+        img = img.convert('RGB')
+
+    width, height = img.size
+    min_side = min(width, height)
+    left = (width - min_side) // 2
+    top = (height - min_side) // 2
+    img = img.crop((left, top, left + min_side, top + min_side))
+    img = img.resize((500, 500), Image.LANCZOS)
+
+    buf = io.BytesIO()
+    img.save(buf, format='JPEG', quality=90)
+    buf.seek(0)
+    return buf.read()
+
 def render_dashboard_html(user: User, page: Page, links: list, saved: bool = False, error: Optional[str] = None) -> str:
+    avatar_url = get_avatar_url(page.username)
+    avatar_preview = ""
+    if avatar_url:
+        avatar_preview = f'<div class="avatar-preview"><img src="{avatar_url}" alt="Текущий аватар"></div>'
+    else:
+        initials = ''.join([w[0].upper() for w in user.name.split()[:2]]) if user.name else "N"
+        avatar_preview = f"""<div class="avatar-preview">
+            <svg width="140" height="140" viewBox="0 0 140 140" xmlns="http://www.w3.org/2000/svg">
+                <rect width="140" height="140" fill="#e8e5df"/>
+                <text x="50%" y="54%" dominant-baseline="middle" text-anchor="middle" font-family="-apple-system,sans-serif" font-size="42" font-weight="300" fill="#2b2b2b">{initials}</text>
+            </svg>
+        </div>"""
+
+    # Генерация полей ссылок (без изменений)
     link_fields = f"""
     <div class="field">
       <label>Ссылка 1</label>
@@ -240,6 +295,69 @@ def render_dashboard_html(user: User, page: Page, links: list, saved: bool = Fal
     .error{{background:#fde8e8;color:#a12b2b;padding:12px 16px;border-radius:8px;margin-top:20px}}
     .preview-link{{display:block;margin-top:16px;font-size:14px;color:var(--accent)}}
     hr.divider{{border:0;height:1px;background:var(--border);margin:24px 0 32px 0;}}
+
+    .avatar-section {{
+        display: flex;
+        align-items: center;
+        gap: 24px;
+        margin-bottom: 28px;
+        padding: 16px;
+        border: 2px dashed var(--border);
+        border-radius: 12px;
+        transition: border-color .2s;
+    }}
+    .avatar-section:hover {{
+        border-color: var(--accent);
+    }}
+    .avatar-preview {{
+        width: 140px;
+        height: 140px;
+        border-radius: 50%;
+        border: 2px solid var(--border);
+        overflow: hidden;
+        flex-shrink: 0;
+        background: #f5f5f5;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+    }}
+    .avatar-preview img {{
+        width: 100%;
+        height: 100%;
+        object-fit: cover;
+    }}
+    .avatar-preview svg {{
+        width: 100%;
+        height: 100%;
+    }}
+    .avatar-upload {{
+        flex: 1;
+    }}
+    .avatar-upload label.upload-btn {{
+        display: inline-block;
+        padding: 10px 20px;
+        border: 1px solid var(--accent);
+        color: var(--accent);
+        font-size: 14px;
+        cursor: pointer;
+        transition: background .2s, color .2s;
+        margin-bottom: 8px;
+        border-radius: 4px;
+    }}
+    .avatar-upload label.upload-btn:hover {{
+        background: var(--accent);
+        color: #fff;
+    }}
+    .avatar-upload input[type="file"] {{
+        display: none;
+    }}
+    .avatar-hint {{
+        font-size: 13px;
+        color: var(--muted);
+        margin-top: 6px;
+        line-height: 1.4;
+    }}
+
     {toggle_css}
   </style>
 </head>
@@ -249,7 +367,18 @@ def render_dashboard_html(user: User, page: Page, links: list, saved: bool = Fal
   <hr class="divider">
   {"<div class='error'>" + error + "</div>" if error else ""}
   {f"<div class='success'>Страница обновлена! <a class='preview-link' href='/{page.username}.html'>Посмотреть</a></div>" if saved else ""}
-  <form method="post" class="card">
+  <form method="post" enctype="multipart/form-data" class="card">
+    <div class="field">
+      <label>Аватар</label>
+      <div class="avatar-section">
+        {avatar_preview}
+        <div class="avatar-upload">
+          <label class="upload-btn" for="avatar-input">Выбрать фото</label>
+          <input id="avatar-input" type="file" name="avatar" accept="image/png, image/jpeg, image/webp">
+          <div class="avatar-hint">Рекомендуется 300×300 px<br>PNG, JPG или WebP, до 2 МБ</div>
+        </div>
+      </div>
+    </div>
     <div class="field">
       <label>Адрес вашей страницы</label>
       <div style="padding:12px 16px;background:#f5f5f5;border-radius:4px;">{page.username}</div>
@@ -332,6 +461,7 @@ async def dashboard_save(
     link_url_3: Optional[str] = Form(""),
     link_title_4: Optional[str] = Form(""),
     link_url_4: Optional[str] = Form(""),
+    avatar: Optional[UploadFile] = File(None),
 ):
     user = await get_current_user(request, db)
     result = await db.execute(select(Page).where(Page.id == page_id, Page.user_id == user.id))
@@ -356,7 +486,31 @@ async def dashboard_save(
     await db.commit()
     await db.refresh(page)
 
-    initials = ''.join([w[0].upper() for w in name.strip().split()[:2]]) if name else "N"
+    # Обработка аватара
+    AVATAR_DIR.mkdir(exist_ok=True)
+    if avatar and avatar.filename:
+        ext = avatar.filename.rsplit('.', 1)[-1].lower() if '.' in avatar.filename else ''
+        if ext not in ALLOWED_EXTENSIONS:
+            html = render_dashboard_html(user, page, links, error="Допустимы только PNG, JPG или WebP.")
+            return HTMLResponse(html)
+        contents = await avatar.read()
+        if len(contents) > MAX_AVATAR_SIZE:
+            html = render_dashboard_html(user, page, links, error="Файл слишком большой (макс. 2 МБ).")
+            return HTMLResponse(html)
+
+        # Обработка и сохранение аватара как JPEG
+        try:
+            processed = process_avatar(contents)
+        except Exception:
+            html = render_dashboard_html(user, page, links, error="Не удалось обработать изображение.")
+            return HTMLResponse(html)
+
+        # Удаляем все старые аватары
+        delete_avatars(page.username)
+        # Сохраняем как username.jpg
+        (AVATAR_DIR / f"{page.username}.jpg").write_bytes(processed)
+
+    initials = ''.join([w[0].upper() for w in name.split()[:2]]) if name else "N"
 
     try:
         page_config = PageConfig(
@@ -369,17 +523,14 @@ async def dashboard_save(
             links=[Link(title=l["title"], url=l["url"], featured=l["featured"]) for l in links]
         )
     except Exception:
-        links_fallback = links
-        html = render_dashboard_html(user, page, links_fallback, error="Одна из ссылок содержит некорректный URL.")
+        html = render_dashboard_html(user, page, links, error="Одна из ссылок содержит некорректный URL.")
         return HTMLResponse(html)
 
     html = render_page(page_config)
     output_dir = Path("static")
     output_dir.mkdir(exist_ok=True)
     if old_username != page.username:
-        old_path = output_dir / f"{old_username}.html"
-        if old_path.exists():
-            old_path.unlink()
+        (output_dir / f"{old_username}.html").unlink(missing_ok=True)
     (output_dir / f"{page.username}.html").write_text(html, encoding="utf-8")
 
     success_html = f"""<!DOCTYPE html>
@@ -422,9 +573,7 @@ async def dashboard_save(
       text-decoration:none;transition:background .2s,color .2s;
     }}
     .btn:hover{{background:var(--accent);color:#fff}}
-    .btn-secondary{{
-      border-color:var(--border);color:var(--muted);
-    }}
+    .btn-secondary{{border-color:var(--border);color:var(--muted)}}
     .btn-secondary:hover{{background:#f5f5f5;color:var(--text)}}
     .note{{margin-top:24px;font-size:13px;color:var(--muted)}}
   </style>
