@@ -44,3 +44,8 @@ dist/
 
 # Контрольные точки Jupyter
 .ipynb_checkpoints/
+
+# Сгенерированные страницы пользователей (все HTML в static, кроме index.html и login.html)
+static/*.html
+!static/index.html
+!static/login.html
