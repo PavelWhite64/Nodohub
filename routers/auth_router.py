@@ -8,13 +8,14 @@ from auth import hash_password, verify_password, create_access_token
 
 router = APIRouter()
 
+
 @router.post("/auth/register")
 async def register(
-    request: Request,
-    name: str = Form(...),
-    email: str = Form(...),
-    password: str = Form(...),
-    db: AsyncSession = Depends(get_db)
+        request: Request,
+        name: str = Form(...),
+        email: str = Form(...),
+        password: str = Form(...),
+        db: AsyncSession = Depends(get_db)
 ):
     result = await db.execute(select(User).where(User.email == email))
     if result.scalar_one_or_none():
@@ -24,26 +25,30 @@ async def register(
     db.add(user)
     await db.commit()
     await db.refresh(user)
+
     token = create_access_token({"sub": str(user.id), "email": user.email})
     response = RedirectResponse("/account", status_code=302)
     response.set_cookie(key="session", value=token, httponly=True, secure=False, samesite="lax")
     return response
 
+
 @router.post("/auth/login")
 async def login(
-    request: Request,
-    email: str = Form(...),
-    password: str = Form(...),
-    db: AsyncSession = Depends(get_db)
+        request: Request,
+        email: str = Form(...),
+        password: str = Form(...),
+        db: AsyncSession = Depends(get_db)
 ):
     result = await db.execute(select(User).where(User.email == email))
     user = result.scalar_one_or_none()
     if not user or not verify_password(password, user.hashed_password):
         return RedirectResponse("/login?error=invalid_credentials", status_code=302)
+
     token = create_access_token({"sub": str(user.id), "email": user.email})
     response = RedirectResponse("/account", status_code=302)
     response.set_cookie(key="session", value=token, httponly=True, secure=False, samesite="lax")
     return response
+
 
 @router.get("/logout")
 async def logout():
