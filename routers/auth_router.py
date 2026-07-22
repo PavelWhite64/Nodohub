@@ -8,47 +8,56 @@ from auth import hash_password, verify_password, create_access_token
 
 router = APIRouter()
 
-
 @router.post("/auth/register")
 async def register(
-        request: Request,
-        name: str = Form(...),
-        email: str = Form(...),
-        password: str = Form(...),
-        db: AsyncSession = Depends(get_db)
+    request: Request,
+    name: str = Form(...),
+    email: str = Form(...),
+    password: str = Form(...),
+    username: str = Form(...),  # новое поле
+    db: AsyncSession = Depends(get_db)
 ):
+    # Проверка формата username
+    if not username.startswith("@"):
+        return RedirectResponse("/?error=username_format#signup", status_code=302)
+    clean = username[1:].strip().lower()
+    if not clean or not clean.replace('_', '').replace('-', '').isalnum():
+        return RedirectResponse("/?error=username_format#signup", status_code=302)
+
+    # Проверка уникальности email
     result = await db.execute(select(User).where(User.email == email))
     if result.scalar_one_or_none():
         return RedirectResponse("/?error=email_taken#signup", status_code=302)
 
-    user = User(email=email, name=name, hashed_password=hash_password(password))
+    # Проверка уникальности username
+    result = await db.execute(select(User).where(User.username == username))
+    if result.scalar_one_or_none():
+        return RedirectResponse("/?error=username_taken#signup", status_code=302)
+
+    user = User(email=email, name=name, hashed_password=hash_password(password), username=username)
     db.add(user)
     await db.commit()
     await db.refresh(user)
-
     token = create_access_token({"sub": str(user.id), "email": user.email})
     response = RedirectResponse("/account", status_code=302)
     response.set_cookie(key="session", value=token, httponly=True, secure=False, samesite="lax")
     return response
 
-
 @router.post("/auth/login")
 async def login(
-        request: Request,
-        email: str = Form(...),
-        password: str = Form(...),
-        db: AsyncSession = Depends(get_db)
+    request: Request,
+    email: str = Form(...),
+    password: str = Form(...),
+    db: AsyncSession = Depends(get_db)
 ):
     result = await db.execute(select(User).where(User.email == email))
     user = result.scalar_one_or_none()
     if not user or not verify_password(password, user.hashed_password):
         return RedirectResponse("/login?error=invalid_credentials", status_code=302)
-
     token = create_access_token({"sub": str(user.id), "email": user.email})
     response = RedirectResponse("/account", status_code=302)
     response.set_cookie(key="session", value=token, httponly=True, secure=False, samesite="lax")
     return response
-
 
 @router.get("/logout")
 async def logout():

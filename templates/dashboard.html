@@ -71,8 +71,9 @@
   <hr class="divider">
   {% if error %}<div class='error'>{{ error }}</div>{% endif %}
   {% if saved %}<div class='success'>Страница обновлена! <a class='preview-link' href='/{{ page.username }}.html'>Посмотреть</a></div>{% endif %}
+  {% if avatar_msg %}<div class='success'>{{ avatar_msg }}</div>{% endif %}
 
-  <form method="post" enctype="multipart/form-data" class="card">
+  <form method="post" enctype="multipart/form-data" action="/dashboard/{{ page.id }}/upload-avatar">
     <div class="field">
       <label>Аватар</label>
       <div class="avatar-section">
@@ -87,29 +88,31 @@
         </div>
         {% endif %}
         <div class="avatar-upload">
-          <label class="upload-btn" for="avatar-input">Выбрать фото</label>
-          <input id="avatar-input" type="file" name="avatar" accept="image/png, image/jpeg, image/webp">
-          <div class="avatar-hint">Рекомендуется 300×300 px<br>PNG, JPG или WebP, до 2 МБ</div>
+          <div class="upload-btn-wrapper" style="display:inline-flex;gap:12px;align-items:center;">
+            <label class="btn-sm" for="avatar-input" style="padding:10px 20px;border:1px solid var(--accent);color:var(--accent);font-size:14px;cursor:pointer;border-radius:4px;">Выбрать фото</label>
+            <input id="avatar-input" type="file" name="avatar" accept="image/png, image/jpeg, image/webp">
+            <button type="submit" class="btn-sm" style="padding:10px 20px;border:1px solid var(--accent);color:var(--accent);font-size:14px;cursor:pointer;border-radius:4px;background:transparent;">Загрузить</button>
+          </div>
+          <div class="avatar-hint">PNG, JPG или WebP, до 2 МБ</div>
         </div>
       </div>
     </div>
+  </form>
 
+  <form method="post" class="card">
     <div class="field">
       <label>Адрес вашей страницы</label>
       <div style="padding:12px 16px;background:#f5f5f5;border-radius:4px;">{{ page.username }}</div>
       <input type="hidden" name="username" value="{{ page.username }}">
     </div>
-
     <div class="field">
       <label>Имя</label>
       <input type="text" name="name" value="{{ user.name }}" required placeholder="Анна Соколова">
     </div>
-
     <div class="field">
       <label>Роль</label>
       <input type="text" name="role" value="{{ page.role or '' }}" placeholder="Продуктовый дизайнер">
     </div>
-
     <div class="field">
       <label>О себе</label>
       <textarea name="bio" placeholder="Создаю интерфейсы...">{{ page.bio or '' }}</textarea>

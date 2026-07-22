@@ -30,6 +30,7 @@
         .btn-danger{border-color:#a12b2b;color:#a12b2b}
         .btn-danger:hover{background:#a12b2b;color:#fff}
         .create-btn{margin-bottom:24px;}
+        .draft-badge{color:var(--muted);font-size:13px;margin-left:8px;}
     </style>
 </head>
 <body>
@@ -37,14 +38,15 @@
     <h1>Мои визитки</h1>
 
     {% if error == 'limit' %}
-    <div style="color:#c7512e;text-align:center;margin-bottom:20px">Достигнут лимит визиток (максимум 3)</div>
+    <div style="color:#c7512e;text-align:center;margin-bottom:20px">Достигнут лимит (максимум 3). Удалите или сохраните черновик.</div>
     {% endif %}
 
-    {% if pages|length < 3 %}
+    {% if (saved|length + drafts|length) < 3 %}
     <div class="create-btn"><a href="/dashboard/new" class="btn">Создать новую визитку</a></div>
     {% endif %}
 
-    {% for page in pages %}
+    <!-- Сохранённые визитки -->
+    {% for page in saved %}
     <div class="page-card">
         <h3>{{ page.username }}</h3>
         <p>{{ page.role or 'Нет роли' }} — {{ page.bio[:60] if page.bio else '' }}</p>
@@ -58,8 +60,24 @@
     </div>
     {% endfor %}
 
-    {% if pages %}
-    <p style="color:var(--muted);text-align:center;margin-top:40px">Создано {{ pages|length }} из 3 возможных</p>
-    {% endif %}
+    <!-- Черновики -->
+    {% for page in drafts %}
+    <div class="page-card">
+        <h3>{{ page.username }} <span class="draft-badge">[черновик]</span></h3>
+        <p>{{ page.role or 'Нет роли' }} — {{ page.bio[:60] if page.bio else '' }}</p>
+        <div class="actions">
+            <a href="/dashboard/{{ page.id }}" class="btn">Редактировать</a>
+            <form action="/account/delete/{{ page.id }}" method="post" style="display:inline">
+                <button type="submit" class="btn btn-danger">Удалить</button>
+            </form>
+        </div>
+    </div>
+    {% endfor %}
+
+    <p style="color:var(--muted);text-align:center;margin-top:40px">
+        Всего {{ saved|length + drafts|length }} из 3 возможных
+        {% if saved %}(сохранено {{ saved|length }}){% endif %}
+        {% if drafts %}(черновиков {{ drafts|length }}){% endif %}
+    </p>
 </body>
 </html>

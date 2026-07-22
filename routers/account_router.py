@@ -15,12 +15,28 @@ templates = Jinja2Templates(directory="templates")
 async def account(request: Request, db: AsyncSession = Depends(get_db)):
     user = await get_current_user(request, db)
     result = await db.execute(select(Page).where(Page.user_id == user.id).order_by(Page.created_at.desc()))
-    pages = result.scalars().all()
+    all_pages = result.scalars().all()
+
+    # Разделяем на сохранённые (с HTML) и черновики (без HTML)
+    saved = []
+    drafts = []
+    for p in all_pages:
+        if (Path("static") / f"{p.username}.html").exists():
+            saved.append(p)
+        else:
+            drafts.append(p)
+
     error = request.query_params.get("error", "")
     return templates.TemplateResponse(
         request,
         name="account.html",
-        context={"request": request, "user": user, "pages": pages, "error": error}
+        context={
+            "request": request,
+            "user": user,
+            "saved": saved,
+            "drafts": drafts,
+            "error": error
+        }
     )
 
 @router.post("/account/delete/{page_id}")

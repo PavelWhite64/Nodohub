@@ -20,8 +20,9 @@ templates = Jinja2Templates(directory="templates")
 AVATAR_DIR = Path("static/avatars")
 ALLOWED_EXTENSIONS = {"png", "jpg", "jpeg", "webp"}
 MAX_AVATAR_SIZE = 2 * 1024 * 1024
-MAX_LINKS = 10                     # можно изменить на любое число (5, 10, 15)
+MAX_LINKS = 10
 
+# ---------- вспомогательные функции ----------
 def get_avatar_url(username: str) -> Optional[str]:
     for ext in ["jpg", "jpeg", "png", "webp"]:
         path = AVATAR_DIR / f"{username}.{ext}"
@@ -52,10 +53,11 @@ def process_avatar(image_data: bytes) -> bytes:
 
 def build_link_fields(links: list) -> str:
     """Генерирует HTML для каскадных полей ссылок (1..MAX_LINKS)."""
+    # Гарантируем, что в списке ровно MAX_LINKS элементов
     while len(links) < MAX_LINKS:
         links.append({"title": "", "url": "", "featured": False})
 
-    # ---------- первая ссылка всегда видна ----------
+    # Первая ссылка всегда видна
     html = f"""
     <div class="field">
       <label>Ссылка 1</label>
@@ -68,11 +70,9 @@ def build_link_fields(links: list) -> str:
     </div>
     """
 
-    # ---------- рекурсивная вложенность для ссылок 2..MAX_LINKS ----------
+    # Рекурсивная функция для построения групп
     def _group(i: int) -> str:
-        """Строит группу для i-й ссылки (i от 1 до MAX_LINKS-1)."""
-        # последняя ссылка – просто поле без кнопки
-        if i == MAX_LINKS - 1:
+        if i == MAX_LINKS - 1:  # последняя ссылка — просто поле без кнопки
             return f"""
           <div class="field" id="link-field-{i}">
             <label>Ссылка {i+1}</label>
@@ -84,7 +84,7 @@ def build_link_fields(links: list) -> str:
             </div>
           </div>
 """
-        # остальные: поле + кнопка + вложенная группа
+        # Для остальных: поле + кнопка + вложенная группа
         has_next = bool(links[i+1].get('title') or links[i+1].get('url'))
         inner = _group(i+1)
         return f"""
@@ -110,7 +110,7 @@ def build_link_fields(links: list) -> str:
           </div>
 """
 
-    # внешняя кнопка для 2-й ссылки
+    # Внешняя кнопка для 2-й ссылки
     has_1 = bool(links[1].get('title') or links[1].get('url'))
     checked_1 = "checked" if has_1 else ""
     html += f"""
@@ -163,17 +163,29 @@ def generate_toggle_css() -> str:
 async def new_page(request: Request, db: AsyncSession = Depends(get_db)):
     user = await get_current_user(request, db)
     result = await db.execute(select(Page).where(Page.user_id == user.id))
-    if len(result.scalars().all()) >= 3:
+    all_pages = result.scalars().all()
+
+    for p in all_pages:
+        if not (Path("static") / f"{p.username}.html").exists():
+            links = json.loads(p.links) if p.links else []
+            if not links:
+                return RedirectResponse(f"/dashboard/{p.id}", status_code=302)
+
+    if len(all_pages) >= 3:
         return RedirectResponse("/account?error=limit", status_code=302)
-    base = user.email.split('@')[0]
-    username = base
+
+    if user.username:
+        base = user.username[1:]
+    else:
+        base = user.email.split('@')[0]
+    username = f"@{base}"
     counter = 0
     while True:
         result = await db.execute(select(Page).where(Page.username == username))
         if not result.scalar_one_or_none():
             break
         counter += 1
-        username = f"{base}{counter}"
+        username = f"@{base}{counter}"
     page = Page(user_id=user.id, username=username, links="[]")
     db.add(page)
     await db.commit()
@@ -191,22 +203,78 @@ async def dashboard_edit(page_id: int, request: Request, db: AsyncSession = Depe
     if not isinstance(links, list):
         links = []
 
-    return templates.TemplateResponse(
-        request,
-        name="dashboard.html",
-        context={
-            "request": request,
-            "user": user,
-            "page": page,
-            "links": links,
-            "avatar_url": get_avatar_url(page.username),
-            "avatar_initial": ''.join([w[0].upper() for w in user.name.split()[:2]]) if user.name else "N",
-            "link_fields": build_link_fields(links),
-            "toggle_css": generate_toggle_css(),
-            "saved": False,
-            "error": None
-        }
-    )
+    return templates.TemplateResponse(request, "dashboard.html", {
+        "request": request, "user": user, "page": page,
+        "link_fields": build_link_fields(links),
+        "toggle_css": generate_toggle_css(),
+        "avatar_url": get_avatar_url(page.username),
+        "avatar_initial": ''.join([w[0].upper() for w in user.name.split()[:2]]) if user.name else "N",
+        "saved": False, "error": None, "avatar_msg": None
+    })
+
+@router.post("/dashboard/{page_id}/upload-avatar", response_class=HTMLResponse)
+async def upload_avatar(
+    page_id: int,
+    request: Request,
+    db: AsyncSession = Depends(get_db),
+    avatar: Optional[UploadFile] = File(None),
+    name: Optional[str] = Form(""),
+    role: Optional[str] = Form(""),
+    bio: Optional[str] = Form(""),
+    link_title_0: Optional[str] = Form(""),
+    link_url_0: Optional[str] = Form(""),
+    link_title_1: Optional[str] = Form(""),
+    link_url_1: Optional[str] = Form(""),
+    link_title_2: Optional[str] = Form(""),
+    link_url_2: Optional[str] = Form(""),
+    link_title_3: Optional[str] = Form(""),
+    link_url_3: Optional[str] = Form(""),
+    link_title_4: Optional[str] = Form(""),
+    link_url_4: Optional[str] = Form(""),
+):
+    user = await get_current_user(request, db)
+    result = await db.execute(select(Page).where(Page.id == page_id, Page.user_id == user.id))
+    page = result.scalar_one_or_none()
+    if not page:
+        return RedirectResponse("/account", status_code=302)
+
+    links = json.loads(page.links) if page.links else []
+    if not isinstance(links, list):
+        links = []
+    page.role = role or page.role
+    page.bio = bio or page.bio
+
+    error_msg = None
+    avatar_url = get_avatar_url(page.username)
+    AVATAR_DIR.mkdir(exist_ok=True)
+
+    if avatar and avatar.filename:
+        ext = avatar.filename.rsplit('.', 1)[-1].lower() if '.' in avatar.filename else ''
+        if ext not in ALLOWED_EXTENSIONS:
+            error_msg = "Допустимы только PNG, JPG или WebP."
+        else:
+            contents = await avatar.read()
+            if len(contents) > MAX_AVATAR_SIZE:
+                error_msg = "Файл слишком большой (макс. 2 МБ)."
+            else:
+                try:
+                    processed = process_avatar(contents)
+                    delete_avatars(page.username)
+                    (AVATAR_DIR / f"{page.username}.jpg").write_bytes(processed)
+                    avatar_url = get_avatar_url(page.username)
+                except Exception:
+                    error_msg = "Не удалось обработать изображение."
+
+    return templates.TemplateResponse(request, "dashboard.html", {
+        "request": request, "user": user, "page": page,
+        "link_fields": build_link_fields(links),
+        "toggle_css": generate_toggle_css(),
+        "avatar_url": avatar_url,
+        "avatar_initial": ''.join([w[0].upper() for w in user.name.split()[:2]]) if user.name else "N",
+        "saved": False,
+        "error": error_msg,
+        "avatar_msg": "Фото загружено!" if not error_msg else None
+    })
 
 @router.post("/dashboard/{page_id}", response_class=HTMLResponse)
 async def dashboard_save(
@@ -228,7 +296,6 @@ async def dashboard_save(
     link_url_3: Optional[str] = Form(""),
     link_title_4: Optional[str] = Form(""),
     link_url_4: Optional[str] = Form(""),
-    avatar: Optional[UploadFile] = File(None),
 ):
     user = await get_current_user(request, db)
     result = await db.execute(select(Page).where(Page.id == page_id, Page.user_id == user.id))
@@ -256,32 +323,6 @@ async def dashboard_save(
         delete_avatars(old_username)
         (Path("static") / f"{old_username}.html").unlink(missing_ok=True)
 
-    AVATAR_DIR.mkdir(exist_ok=True)
-    if avatar and avatar.filename:
-        ext = avatar.filename.rsplit('.', 1)[-1].lower() if '.' in avatar.filename else ''
-        err_ctx = {
-            "request": request, "user": user, "page": page, "links": links,
-            "avatar_url": get_avatar_url(page.username),
-            "avatar_initial": name[0].upper() if name else "N",
-            "link_fields": build_link_fields(links),
-            "toggle_css": generate_toggle_css(),
-            "saved": False
-        }
-        if ext not in ALLOWED_EXTENSIONS:
-            err_ctx["error"] = "Допустимы только PNG, JPG или WebP."
-            return templates.TemplateResponse(request, name="dashboard.html", context=err_ctx)
-        contents = await avatar.read()
-        if len(contents) > MAX_AVATAR_SIZE:
-            err_ctx["error"] = "Файл слишком большой (макс. 2 МБ)."
-            return templates.TemplateResponse(request, name="dashboard.html", context=err_ctx)
-        try:
-            processed = process_avatar(contents)
-        except Exception:
-            err_ctx["error"] = "Не удалось обработать изображение."
-            return templates.TemplateResponse(request, name="dashboard.html", context=err_ctx)
-        delete_avatars(page.username)
-        (AVATAR_DIR / f"{page.username}.jpg").write_bytes(processed)
-
     initials = ''.join([w[0].upper() for w in name.split()[:2]]) if name else "N"
     try:
         page_config = PageConfig(
@@ -294,24 +335,26 @@ async def dashboard_save(
             links=[Link(title=l["title"], url=l["url"], featured=l["featured"]) for l in links]
         )
     except Exception:
-        err_ctx = {
-            "request": request, "user": user, "page": page, "links": links,
-            "avatar_url": get_avatar_url(page.username),
-            "avatar_initial": initials,
+        return templates.TemplateResponse(request, "dashboard.html", {
+            "request": request, "user": user, "page": page,
             "link_fields": build_link_fields(links),
             "toggle_css": generate_toggle_css(),
-            "saved": False,
-            "error": "Одна из ссылок содержит некорректный URL."
-        }
-        return templates.TemplateResponse(request, name="dashboard.html", context=err_ctx)
+            "avatar_url": get_avatar_url(page.username),
+            "avatar_initial": initials,
+            "saved": False, "error": "Одна из ссылок содержит некорректный URL.",
+            "avatar_msg": None
+        })
 
     html = render_page(page_config)
     output_dir = Path("static")
     output_dir.mkdir(exist_ok=True)
     (output_dir / f"{page.username}.html").write_text(html, encoding="utf-8")
 
-    return templates.TemplateResponse(
-        request,
-        name="success.html",
-        context={"request": request, "page": page}
-    )
+    return templates.TemplateResponse(request, "dashboard.html", {
+        "request": request, "user": user, "page": page,
+        "link_fields": build_link_fields(links),
+        "toggle_css": generate_toggle_css(),
+        "avatar_url": get_avatar_url(page.username),
+        "avatar_initial": initials,
+        "saved": True, "error": None, "avatar_msg": None
+    })

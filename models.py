@@ -9,6 +9,7 @@ class User(Base):
     email = Column(String, unique=True, index=True, nullable=False)
     hashed_password = Column(String, nullable=False)
     name = Column(String, nullable=False)
+    username = Column(String, unique=True, nullable=True)  # новое поле, хранится с @
     pages = relationship("Page", back_populates="user")
 
 class Page(Base):
